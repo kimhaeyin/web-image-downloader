@@ -1,0 +1,60 @@
+name: 测试并发布官网到 GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# GitHub Pages 官方发布方式所需的权限
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时间只跑一个发布流程，新的推送取消排队中的旧任务
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: 测试与打包校验
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Node 单元测试
+        run: node tests/run-tests.js
+
+      - name: 校验 ZIP 与 extension/ 一致
+        run: node tools/verify-zip.js
+
+      # ubuntu runner 自带 Chrome；容器里跑 Chromium 需要关掉它自己的沙箱
+      - name: 浏览器测试（采集 / 展示页 / 官网自检）
+        env:
+          IG_BROWSER_ARGS: --no-sandbox --disable-dev-shm-usage
+        run: node tests/browser/run-browser-tests.js
+
+  deploy:
+    name: 发布到 GitHub Pages
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      # 站点就是 docs/ 目录本身，直接整目录上传，不做任何构建
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
