@@ -811,12 +811,6 @@ img {
   font-weight: 600;
 }
 
-/* 最后一项是 64 个字符的 SHA-256 校验值：让它独占一整行，
-   否则在窄列里会被拆成两行半，很难对照。 */
-.download-meta li:last-child {
-  grid-column: 1 / -1;
-}
-
 .download-action {
   padding: var(--space-6);
   background: var(--c-surface-alt);

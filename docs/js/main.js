@@ -19,10 +19,11 @@
   /**
    * 仓库地址。
    *
-   * 留空时页脚的「GitHub 仓库」链接会被整条隐藏，而不是指向一个假地址。
-   * 也可以用 <a id="repoLink" data-repo="..."> 覆盖这里的值。
+   * 这里留空时，页脚的「GitHub 仓库」链接会被隐藏，而不是指向一个假地址。
+   * 换上你自己的仓库地址（例如 https://github.com/你的用户名/web-image-downloader）
+   * 之后，链接会自动出现。也可以用 <a id="repoLink" data-repo="..."> 覆盖。
    */
-  const REPO_URL = 'https://github.com/kimhaein/web-image-downloader';
+  const REPO_URL = '';
 
   const ZIP_URL = 'downloads/imagegrab.zip';
 

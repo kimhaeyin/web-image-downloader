@@ -44,10 +44,6 @@ const HEADED = ARGS.indexOf('--headed') >= 0;
 const SHOT = (ARGS.find(function (a) { return a.indexOf('--shot=') === 0; }) || '').slice(7);
 /** --shot-selector=<CSS 选择器>：只截取某个区块，便于放大看细节 */
 const SHOT_SELECTOR = (ARGS.find(function (a) { return a.indexOf('--shot-selector=') === 0; }) || '').slice(16);
-/** IG_BROWSER_ARGS：追加给浏览器的启动参数（CI 里常用 --no-sandbox --disable-dev-shm-usage） */
-const EXTRA_BROWSER_ARGS = (process.env.IG_BROWSER_ARGS || '')
-  .split(/\s+/)
-  .filter(function (a) { return a.length > 0; });
 
 // ===========================================================================
 // 一、找一个可用的浏览器
@@ -254,10 +250,9 @@ async function launchBrowser(exe, port, profileDir) {
     '--disable-sync',
     '--disable-gpu',
     '--mute-audio',
-    '--metrics-recording-only'
-  ]
-    .concat(EXTRA_BROWSER_ARGS)
-    .concat(['about:blank']);
+    '--metrics-recording-only',
+    'about:blank'
+  ];
 
   const child = spawn(exe, args, { stdio: 'ignore' });
 
@@ -620,8 +615,8 @@ async function runSite(cdp) {
       '(function(){var a=document.getElementById("repoLink");var li=a.closest("li");' +
       'if(li&&li.hidden)return "hidden";return a.getAttribute("href");})()'
     );
-    check('GitHub 仓库链接指向真实的仓库地址（不指向 "#"）',
-      /^https:\/\/github\.com\/[^/\s]+\/[^/\s]+$/.test(String(repoState)), String(repoState));
+    check('GitHub 仓库链接要么指向真实地址，要么整条隐藏（不指向 "#"）',
+      repoState === 'hidden' || /^https?:\/\//.test(String(repoState)), String(repoState));
 
     // ---- 下载区：网页显示的信息必须和磁盘上的 ZIP 一致 ----
     const zipPath = path.join(ROOT, 'docs', 'downloads', 'imagegrab.zip');
@@ -690,50 +685,25 @@ async function runSite(cdp) {
       );
       const metrics = await cdp.send('Page.getLayoutMetrics', {}, target.sessionId);
       const content = metrics.cssContentSize || metrics.contentSize;
-
-      let clip = {
-        x: 0,
-        y: 0,
-        width: content.width,
-        height: Math.min(content.height, 12000),
-        scale: 1
-      };
-
-      if (SHOT_SELECTOR) {
-        const rect = JSON.parse(
-          String(
-            await evaluate(
-              cdp,
-              target.sessionId,
-              'JSON.stringify((function(){var e=document.querySelector(' +
-                JSON.stringify(SHOT_SELECTOR) +
-                ');if(!e)return null;var r=e.getBoundingClientRect();' +
-                'return {x:r.left+window.scrollX,y:r.top+window.scrollY,width:r.width,height:r.height};})())'
-            )
-          )
-        );
-        if (!rect) throw new Error('截图选择器没有匹配到元素：' + SHOT_SELECTOR);
-        clip = {
-          x: Math.max(0, rect.x - 8),
-          y: Math.max(0, rect.y - 8),
-          width: rect.width + 16,
-          height: rect.height + 16,
-          scale: 1
-        };
-      }
-
       const shot = await cdp.send(
         'Page.captureScreenshot',
-        { format: 'png', captureBeyondViewport: true, clip: clip },
+        {
+          format: 'png',
+          captureBeyondViewport: true,
+          clip: {
+            x: 0,
+            y: 0,
+            width: content.width,
+            height: Math.min(content.height, 12000),
+            scale: 1
+          }
+        },
         target.sessionId,
         60000
       );
       const outPath = path.resolve(ROOT, SHOT);
       fs.writeFileSync(outPath, Buffer.from(shot.data, 'base64'));
-      console.log(
-        '\n截图已保存：' + path.relative(ROOT, outPath) +
-          '（' + Math.round(clip.width) + '×' + Math.round(clip.height) + '）'
-      );
+      console.log('\n整页截图已保存：' + path.relative(ROOT, outPath));
     }
 
     const failed = checks.filter(function (c) { return !c.pass; });

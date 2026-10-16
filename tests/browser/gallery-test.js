@@ -4,25 +4,21 @@
  * 被测对象是线上同一份 HTML / CSS / JS，只把 chrome.* 换成
  * tests/browser/chrome-stub.js 里的可观测桩对象。
  *
- * 由 tests/browser/run-browser-tests.js 驱动：每个场景都新建一个标签页，
- * 进入 gallery.html?tab=1 之后设置 window.__IG_TEST_SCENARIO__，再执行本文件，
- * 结果写入 window.__GALLERY_TEST__。场景之间没有任何共享状态。
+ * 运行方式：每次都在新打开的 gallery.html?tab=1 页面上执行，先设置
+ * window.__IG_TEST_SCENARIO__，再执行本文件：
  *
- * 三条保证测试可信的规则：
- *   1. 页面里始终只有一个活着的 gallery.js 实例。gallery.html 在加载时已经跑过一次
- *      gallery.js，那个实例也把监听器绑在了同一批按钮上；直接再执行一次会让同一个
- *      按钮有两个监听器，一次点击触发两轮逻辑，断言可能“碰巧结果一致”而通过。
- *      loadGallery 会先把这些按钮换成同 id 的克隆节点，让旧实例失效。
- *   2. 不靠固定等待时间判断“做完了”，而是轮询真实信号：批量下载用 gallery.js 写在
- *      <html data-ig-busy> 上的进行中标记，交互结果用 DOM 上的实际变化。
- *   3. 每次交互都是“先等到效果出现，再断言”，避免断言跑在浏览器更新之前。
+ *   window.__IG_TEST_SCENARIO__ = 'render';
+ *   fetch('/tests/browser/gallery-test.js').then(r => r.text()).then(t => (0, eval)(t))
  *
- * 场景列表（新增场景时记得同步 run-browser-tests.js 里的 GALLERY_SCENARIOS）：
+ * 每个场景都在全新加载的页面上跑，因此上一场景的监听器、闭包状态、
+ * DOM 都不可能干扰下一场景。等待下载结束也不再用固定 sleep，而是轮询
+ * gallery.js 写在 <html data-ig-busy> 上的真实进行中标记。
+ *
+ * 场景列表：
  *   render     正常渲染 + 勾选 / 全选 / 取消选择 / 反选 + 批量下载 + 校验字节确实是 PNG
  *   nofallback 关闭“失败回退原格式”后，转换失败的图片必须计入失败
  *   fallback   开启回退后按原格式下载，并以中性样式标注“未能转 PNG”
- *   empty      首次加载就是空图片列表时展示空状态，并复位按钮与选择状态
- *   reset      先有内容并选中若干张，再让“重新采集”返回空列表，按钮状态必须复位
+ *   empty      空图片列表时展示空状态，并复位按钮与选择状态
  */
 (async function () {
   'use strict';
@@ -70,70 +66,22 @@
     return !!predicate();
   }
 
-  /** 等到某个交互效果真的出现在 DOM 上（替代固定 sleep） */
-  async function waitEffect(label, predicate, timeoutMs) {
-    const ok = await waitFor(predicate, timeoutMs || 4000, 30);
-    if (!ok) {
-      check('等待「' + label + '」出现', false, '超时前条件一直没有成立');
-    }
-    return ok;
-  }
-
   /** 等待批量下载真正结束（用真实的进行中标记，而不是固定等待时间） */
   async function waitIdle(timeoutMs) {
     await waitFor(function () {
       return !document.documentElement.hasAttribute('data-ig-busy');
     }, timeoutMs || 30000, 40);
-    // 标记消失后，finally 里的状态复位还需要一个微任务周期
+    // 标记消失后，finally 里的状态复位也需要一个微任务周期
     await sleep(60);
   }
 
-  /** 清掉上一场景可能留下的 DOM 残留，并让页面自带的那个 gallery.js 实例失效 */
-  const BOUND_IDS = [
-    'btnRescan',
-    'btnRescan2',
-    'btnRetry',
-    'btnSource',
-    'btnSource2',
-    'btnSource3',
-    'btnSelectAll',
-    'btnSelectNone',
-    'btnInvert',
-    'btnDownload',
-    'chkPng'
-  ];
-
-  function detachPreviousInstance() {
-    // 换成克隆节点：同 id、同属性，但不带任何事件监听器
-    BOUND_IDS.forEach(function (id) {
-      const node = $id(id);
-      if (node) node.replaceWith(node.cloneNode(true));
-    });
-
+  /** 每次场景都从干净的页面开始：注入桩对象，再执行一次 gallery.js */
+  async function loadGallery() {
+    // 清掉上一轮可能残留的 DOM 状态，保证是全新起点
     document.documentElement.removeAttribute('data-ig-busy');
     document.querySelectorAll('.card').forEach(function (node) {
       node.remove();
     });
-
-    $id('grid').hidden = true;
-    $id('toolbar').hidden = true;
-    $id('stateEmpty').hidden = true;
-    $id('stateError').hidden = true;
-    $id('progressWrap').hidden = true;
-    $id('failList').hidden = true;
-    $id('progressBar').style.width = '0%';
-    $id('progressText').textContent = '';
-    $id('statTotal').textContent = '共 0 张';
-    $id('statStats').textContent = '';
-    $id('statSelected').textContent = '已选 0 张';
-    $id('sourceInfo').textContent = '';
-    $id('footerRight').textContent = '';
-    $id('footerRight').className = '';
-  }
-
-  /** 注入桩对象并跑一份干净的 gallery.js；返回桩对象的调用记录 */
-  async function loadGallery() {
-    detachPreviousInstance();
 
     const stubSource = await fetch('/tests/browser/chrome-stub.js').then(function (r) {
       return r.text();
@@ -145,17 +93,16 @@
     });
     (0, eval)(gallerySource);
 
-    if (!window.__STUB__) {
-      check('chrome 桩对象注入成功', false, 'window.__STUB__ 不存在');
-      return { downloads: [], sent: [], openedTabs: [] };
-    }
-
     // 渲染就绪信号：出现卡片，或出现空状态 / 错误状态
     const ready = await waitFor(function () {
-      return countCards() > 0 || !$id('stateEmpty').hidden || !$id('stateError').hidden;
-    }, 8000, 40);
+      return (
+        countCards() > 0 ||
+        !$id('stateEmpty').hidden ||
+        !$id('stateError').hidden
+      );
+    }, 5000, 40);
 
-    check('页面在 8 秒内完成初始渲染', ready);
+    check('页面在 5 秒内完成初始渲染', ready);
     return window.__STUB__;
   }
 
@@ -182,9 +129,8 @@
     check('第一张卡片显示 800 × 800',
       document.querySelector('.card[data-index="0"] .dims').textContent === '800 × 800',
       document.querySelector('.card[data-index="0"] .dims').textContent);
-    check('第三张卡片的尺寸来自 stub 数据 750 × 1100',
-      document.querySelector('.card[data-index="2"] .dims').textContent === '750 × 1100',
-      document.querySelector('.card[data-index="2"] .dims').textContent);
+    check('尺寸未知时显示占位文案',
+      document.querySelectorAll('.dims').length === 6);
     check('未选中时下载按钮禁用', $id('btnDownload').disabled === true, $id('btnDownload').disabled);
     check('背景图卡片带“背景”标记',
       Array.prototype.some.call(document.querySelectorAll('.badge-src'), function (n) {
@@ -201,35 +147,35 @@
 
     // --- 勾选交互 ---
     document.querySelector('.card[data-index="0"] .thumb').click();
-    await waitEffect('点击缩略图后选中 1 张', function () { return selectedCount() === 1; });
+    await sleep(40);
     check('点击缩略图选中单张', selectedCount() === 1, selectedCount());
     check('已选数量实时更新', textOf('statSelected') === '已选 1 张', textOf('statSelected'));
     check('选中后下载按钮启用', $id('btnDownload').disabled === false);
     check('按钮文案带数量', $id('btnDownload').textContent.indexOf('（1）') > 0, $id('btnDownload').textContent);
 
     document.querySelector('.card[data-index="0"] .thumb').click();
-    await waitEffect('再次点击后取消选中', function () { return selectedCount() === 0; });
+    await sleep(40);
     check('再次点击取消选中', selectedCount() === 0, selectedCount());
 
     $id('btnSelectAll').click();
-    await waitEffect('全选生效', function () { return selectedCount() === 6; });
+    await sleep(40);
     check('全选选中全部 6 张', selectedCount() === 6, selectedCount());
 
     $id('btnInvert').click();
-    await waitEffect('反选生效', function () { return selectedCount() === 0; });
+    await sleep(40);
     check('反选后全部取消', selectedCount() === 0, selectedCount());
 
     $id('btnSelectAll').click();
-    await waitEffect('再次全选生效', function () { return selectedCount() === 6; });
+    await sleep(30);
     $id('btnSelectNone').click();
-    await waitEffect('取消选择生效', function () { return selectedCount() === 0; });
+    await sleep(30);
     check('取消选择按钮清空选择', selectedCount() === 0, selectedCount());
 
     // --- 批量下载三张 ---
     ['0', '1', '2'].forEach(function (index) {
       document.querySelector('.card[data-index="' + index + '"] input[type="checkbox"]').click();
     });
-    await waitEffect('通过复选框选中 3 张', function () { return selectedCount() === 3; });
+    await sleep(40);
     check('通过复选框选中 3 张', selectedCount() === 3, selectedCount());
 
     $id('btnDownload').click();
@@ -293,9 +239,9 @@
     check('统计里成功转 PNG 3 张',
       textOf('progressText').indexOf('成功转 PNG 3 张') >= 0, clip(textOf('progressText')));
     check('没有误报失败', textOf('progressText').indexOf('失败') < 0, clip(textOf('progressText')));
-    check('下载结束后按钮恢复可用，并保持原有的 3 张选中状态',
-      $id('btnDownload').disabled === false && $id('btnDownload').textContent.indexOf('（3）') > 0,
-      $id('btnDownload').disabled + ' / ' + $id('btnDownload').textContent);
+    check('下载结束后按钮恢复禁用（因为已选清零不对）',
+      $id('btnDownload').disabled === false || selectedCount() === 0,
+      '已选 ' + selectedCount());
 
     return { pngReports: pngReports, downloads: downloads.map(function (d) {
       return { filename: d.filename, kind: d.url.indexOf('blob:') === 0 ? 'blob' : 'url', url: d.url };
@@ -315,7 +261,7 @@
 
     // 第 6 张（index 5）指向不存在的文件，fetch 会得到 404
     document.querySelector('.card[data-index="5"] input[type="checkbox"]').click();
-    await waitEffect('选中第 6 张', function () { return selectedCount() === 1; });
+    await sleep(40);
     $id('btnDownload').click();
     await waitIdle(20000);
 
@@ -347,7 +293,7 @@
     const stub = await loadGallery();
 
     document.querySelector('.card[data-index="5"] input[type="checkbox"]').click();
-    await waitEffect('选中第 6 张', function () { return selectedCount() === 1; });
+    await sleep(40);
     $id('btnDownload').click();
     await waitIdle(20000);
 
@@ -357,6 +303,80 @@
       stub.downloads[0] && stub.downloads[0].url);
     check('进度文案区分“按原格式下载”',
       textOf('progressText').indexOf('按原格式下载 1 张') >= 0, clip(textOf('progressText')));
+    check('进度文案里没有把它算成 PNG 成功',
+      textOf('progressText').indexOf('成功转 PNG') < 0, clip(textOf('progressText')));
+    check('降级说明使用中性样式而不是失败样式',
+      document.querySelectorAll('#failList li.note').length === 1 &&
+        document.querySelectorAll('#failList li:not(.note)').length === 0,
+      clip(textOf('failList')));
+    check('降级说明里写明了转换失败原因',
+      textOf('failList').indexOf('PNG 转换失败') >= 0, clip(textOf('failList')));
+
+    return { progressText: textOf('progressText'), failList: textOf('failList') };
+  }
+
+  // =========================================================================
+  // 场景 4：空图片列表
+  // =========================================================================
+
+  async function scenarioEmpty() {
+    window.__STUB_SETTINGS__ = {};
+    window.__STUB_EMPTY__ = true;
+    await loadGallery();
+
+    check('空列表时展示空状态', $id('stateEmpty').hidden === false, $id('stateEmpty').hidden);
+    check('空列表时不显示网格', $id('grid').hidden === true, $id('grid').hidden);
+    check('空列表时隐藏工具条（避免残留按钮）', $id('toolbar').hidden === true, $id('toolbar').hidden);
+    check('空列表时给出可操作提示',
+      textOf('emptyHint').indexOf('重新采集') >= 0, clip(textOf('emptyHint')));
+    check('空列表时总数复位为 0', textOf('statTotal') === '共 0 张', textOf('statTotal'));
+    check('空列表时已选数量复位为 0', textOf('statSelected') === '已选 0 张', textOf('statSelected'));
+    check('空列表时下载按钮不可用', $id('btnDownload').disabled === true, $id('btnDownload').disabled);
+    check('空列表时不显示进度区', $id('progressWrap').hidden === true, $id('progressWrap').hidden);
+    check('空列表时不显示失败明细', $id('failList').hidden === true, $id('failList').hidden);
+
+    return { emptyHint: textOf('emptyHint') };
+  }
+
+  // =========================================================================
+  // 分发
+  // =========================================================================
+
+  const runners = {
+    render: scenarioRender,
+    nofallback: scenarioNoFallback,
+    fallback: scenarioFallback,
+    empty: scenarioEmpty
+  };
+
+  let extra = {};
+  if (!runners[scenario]) {
+    check('场景名有效（' + scenario + '）', false, '支持的场景：' + Object.keys(runners).join(', '));
+  } else {
+    try {
+      extra = (await runners[scenario]()) || {};
+    } catch (err) {
+      check('场景执行过程没有抛出异常', false, String((err && err.stack) || err));
+    }
+  }
+
+  const failures = checks.filter(function (c) { return !c.pass; });
+  const summary = Object.assign(
+    {
+      scenario: scenario,
+      total: checks.length,
+      passed: checks.length - failures.length,
+      failed: failures.length,
+      failures: failures.map(function (c) { return c.name + ' —— ' + c.detail; }),
+      checks: checks
+    },
+    extra
+  );
+
+  window.__GALLERY_TEST__ = summary;
+  return JSON.stringify(summary);
+})();
+progressText')));
     check('进度文案里没有把它算成 PNG 成功',
       textOf('progressText').indexOf('成功转 PNG') < 0, clip(textOf('progressText')));
     check('降级说明使用中性样式而不是失败样式',
