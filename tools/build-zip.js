@@ -45,6 +45,24 @@ function crc32(buf) {
 }
 
 // ---------------------------------------------------------------------------
+// 换行符归一
+// ---------------------------------------------------------------------------
+
+/**
+ * 把文本文件的 CRLF 统一成 LF。
+ *
+ * 仓库用 .gitattributes 约定一律 LF，但磁盘上的实际换行符取决于本地的
+ * core.autocrlf、检出时机和编辑器设置。打包前统一一次，才能保证在任何
+ * 平台上打出的都是同一份字节，官网显示的 SHA-256 也就不会漂移。
+ *
+ * 含 NUL 字节的按二进制处理，原样返回（PNG 数据里可能恰好出现 0D 0A）。
+ */
+function normalizeEol(buf) {
+  if (buf.indexOf(0) >= 0) return buf;
+  return Buffer.from(buf.toString('latin1').replace(/\r\n/g, '\n'), 'latin1');
+}
+
+// ---------------------------------------------------------------------------
 // 收集文件
 // ---------------------------------------------------------------------------
 
@@ -82,6 +100,7 @@ function dosDateTime(date) {
 function buildZip(files) {
   const chunks = [];
   const central = [];
+  const normalized = [];
   let offset = 0;
 
   // 固定时间戳，保证同样的输入产生同样的 ZIP 字节
@@ -89,7 +108,9 @@ function buildZip(files) {
 
   for (const rel of files) {
     const abs = path.join(SRC_DIR, rel);
-    const data = fs.readFileSync(abs);
+    const raw = fs.readFileSync(abs);
+    const data = normalizeEol(raw);
+    if (!data.equals(raw)) normalized.push(rel);
     const deflated = zlib.deflateRawSync(data, { level: 9 });
     // 压不下去的就用存储方式，避免越压越大
     const useDeflate = deflated.length < data.length;
@@ -147,7 +168,7 @@ function buildZip(files) {
   eocd.writeUInt32LE(offset, 16);
   eocd.writeUInt16LE(0, 20);
 
-  return Buffer.concat([Buffer.concat(chunks), centralBuf, eocd]);
+  return { zip: Buffer.concat([Buffer.concat(chunks), centralBuf, eocd]), normalized: normalized };
 }
 
 // ---------------------------------------------------------------------------
@@ -166,7 +187,8 @@ function main() {
 
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   const files = listFiles(SRC_DIR, '');
-  const zip = buildZip(files);
+  const built = buildZip(files);
+  const zip = built.zip;
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
   fs.writeFileSync(OUT_FILE, zip);
@@ -176,6 +198,12 @@ function main() {
   files.forEach(function (f) {
     console.log('  + ' + f);
   });
+  if (built.normalized.length) {
+    console.log(
+      '换行符已从 CRLF 归一为 LF：' + built.normalized.length + ' 个文件' +
+      '（' + built.normalized.join(', ') + '）'
+    );
+  }
   console.log('输出：' + path.relative(ROOT, OUT_FILE) + '（' + zip.length + ' 字节）');
 }
 

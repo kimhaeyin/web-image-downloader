@@ -30,8 +30,16 @@ jobs:
       - name: Node 单元测试
         run: node tests/run-tests.js
 
+      - name: 按 extension/ 重新打包
+        run: npm run build:zip
+
       - name: 校验 ZIP 与 extension/ 一致
-        run: node tools/verify-zip.js
+        run: npm run verify:zip
+
+      # build:zip 会覆盖仓库里那份 ZIP，所以必须再比对一次：
+      # 若仓库中的 ZIP 与源码不一致，说明安装包过期，应当失败
+      - name: 确认仓库里的 ZIP 与源码一致（没有过期的安装包）
+        run: git diff --exit-code -- docs/downloads/imagegrab.zip
 
       # ubuntu runner 自带 Chrome；容器里跑 Chromium 需要关掉它自己的沙箱
       - name: 浏览器测试（采集 / 展示页 / 官网自检）
@@ -49,9 +57,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 上传前重新打包，保证发布的安装包由这份源码现打现用
+      - name: 按 extension/ 重新打包
+        run: npm run build:zip
+
       - uses: actions/configure-pages@v5
 
-      # 站点就是 docs/ 目录本身，直接整目录上传，不做任何构建
+      # 站点就是 docs/ 目录本身，整目录上传（安装包已在上面按源码重新打包）
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs

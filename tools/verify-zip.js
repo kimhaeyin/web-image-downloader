@@ -4,6 +4,9 @@
  *   2. 解压每个条目并校验 CRC32 与字节数。
  *   3. 与 extension/ 目录逐文件比对，确认没有缺失、没有多余、内容一致。
  *
+ * 比对前会把源码里的 CRLF 归一为 LF（与 build-zip.js 一致），因此本地的
+ * 检出换行符设置不会影响校验结果；反过来，包内若混进 CRLF 会被判为不一致。
+ *
  * 用法：node tools/verify-zip.js
  */
 
@@ -18,6 +21,18 @@ const SRC_DIR = path.join(ROOT, 'extension');
 const ZIP_FILE = path.join(ROOT, 'docs', 'downloads', 'imagegrab.zip');
 
 let CRC_TABLE = null;
+
+/**
+ * 把文本文件的 CRLF 统一成 LF，与 build-zip.js 的归一规则一致。
+ *
+ * 仓库约定一律 LF，但本地检出的实际换行符取决于 core.autocrlf 和检出时机。
+ * 比对前先归一，校验的才是真正打进包里的内容，而不是本地检出的换行符差异。
+ * 含 NUL 字节的按二进制处理，原样返回。
+ */
+function normalizeEol(buf) {
+  if (buf.indexOf(0) >= 0) return buf;
+  return Buffer.from(buf.toString('latin1').replace(/\r\n/g, '\n'), 'latin1');
+}
 
 function crcTable() {
   if (CRC_TABLE) return CRC_TABLE;
@@ -142,7 +157,7 @@ function main() {
   for (const e of entries) {
     const abs = path.join(SRC_DIR, e.name);
     if (!fs.existsSync(abs)) continue;
-    const src = fs.readFileSync(abs);
+    const src = normalizeEol(fs.readFileSync(abs));
     if (!src.equals(e.data)) mismatch.push(e.name);
   }
 
