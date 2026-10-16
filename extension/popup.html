@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>图提取 ImageGrab</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="head">
+      <img src="icons/icon48.png" alt="" width="36" height="36" />
+      <div>
+        <h1>图提取 ImageGrab</h1>
+        <p id="version">v1.0.0</p>
+      </div>
+    </header>
+
+    <section class="body">
+      <p class="tab-info" id="tabInfo">正在读取当前标签页…</p>
+
+      <button type="button" class="btn primary" id="btnGrab" disabled>获取本页图片</button>
+      <p class="hint" id="hint"></p>
+
+      <details class="settings">
+        <summary>采集与下载设置</summary>
+        <div class="settings-body">
+          <label class="row">
+            <input type="checkbox" id="setConvertPng" />
+            <span>下载时转换为 PNG</span>
+          </label>
+          <label class="row">
+            <input type="checkbox" id="setFallback" />
+            <span>转 PNG 失败时按原格式下载</span>
+          </label>
+          <label class="row">
+            <input type="checkbox" id="setBackground" />
+            <span>处理 CSS 背景图（background-image）</span>
+          </label>
+          <label class="row">
+            <input type="checkbox" id="setScanScripts" />
+            <span>在页面脚本中扫描图片地址（实验性）</span>
+          </label>
+          <label class="row">
+            <input type="checkbox" id="setPreferOriginal" />
+            <span>尝试改写为原图直链（实验性，可能 404）</span>
+          </label>
+          <label class="row row-range">
+            <span>最小边长</span>
+            <input type="range" id="setMinSize" min="0" max="400" step="20" />
+            <output id="minSizeOut">100 px</output>
+          </label>
+          <p class="hint">
+            宽和高都小于“最小边长”的图片会被当作图标或占位图过滤掉。设为 0 表示不做尺寸过滤。
+          </p>
+          <button type="button" class="btn ghost" id="btnReset">恢复默认设置</button>
+        </div>
+      </details>
+    </section>
+
+    <footer class="foot">
+      <span>支持：淘宝 / 天猫 / 京东 / 拼多多</span>
+    </footer>
+
+    <script src="lib/extract-core.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "web-image-downloader",
+  "version": "1.0.0",
+  "private": true,
+  "description": "图提取 ImageGrab —— 电商商品页图片提取与批量下载 Chrome 扩展，以及配套静态官网",
+  "scripts": {
+    "icons": "node tools/make-icons.js",
+    "assets": "node tests/browser/make-assets.js",
+    "build:zip": "node tools/build-zip.js",
+    "verify:zip": "node tools/verify-zip.js",
+    "test": "node tests/run-tests.js",
+    "test:browser": "node tests/browser/run-browser-tests.js",
+    "test:all": "node tests/run-tests.js && node tests/browser/run-browser-tests.js",
+    "serve": "node tools/serve.js"
+  },
+  "license": "MIT"
+}

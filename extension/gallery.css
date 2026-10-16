@@ -1,0 +1,529 @@
+/* 图提取 ImageGrab —— 图片展示页样式 */
+
+:root {
+  --ig-bg: #f5f7fc;
+  --ig-surface: #ffffff;
+  --ig-border: #e3e8f2;
+  --ig-text: #1f2430;
+  --ig-text-weak: #64708a;
+  --ig-blue: #2563eb;
+  --ig-violet: #7c3aed;
+  --ig-blue-soft: #eaf0ff;
+  --ig-danger: #c2410c;
+  --ig-success: #15803d;
+  --ig-radius-lg: 16px;
+  --ig-radius-md: 12px;
+  --ig-radius-sm: 8px;
+  --ig-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 30px rgba(15, 23, 42, 0.06);
+  --ig-space: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--ig-bg);
+  color: var(--ig-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+h1,
+h2,
+p,
+ul {
+  margin: 0;
+}
+
+/* ---------------- 顶栏 ---------------- */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--ig-border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.brand-logo {
+  display: block;
+  border-radius: 10px;
+}
+
+.brand-text {
+  min-width: 0;
+}
+
+.brand-text h1 {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.brand-text p {
+  color: var(--ig-text-weak);
+  font-size: 12.5px;
+  max-width: 62ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ---------------- 按钮 ---------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--ig-surface);
+  color: var(--ig-text);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease,
+    box-shadow 0.15s ease, color 0.15s ease;
+  -webkit-appearance: none;
+  appearance: none;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--ig-blue) 0%, var(--ig-violet) 100%);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.28);
+}
+
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 9px 22px rgba(37, 99, 235, 0.34);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--ig-border);
+  color: var(--ig-text-weak);
+}
+
+.btn-ghost:hover {
+  border-color: #c7d2ea;
+  color: var(--ig-text);
+}
+
+.btn-quiet {
+  background: var(--ig-blue-soft);
+  color: #1d4ed8;
+}
+
+.btn-quiet:hover {
+  background: #dde7ff;
+}
+
+.btn-link {
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--ig-radius-sm);
+  background: transparent;
+  color: var(--ig-blue);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.btn-link:hover {
+  background: var(--ig-blue-soft);
+}
+
+/* ---------------- 页面主体 ---------------- */
+
+.page {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 20px 24px 32px;
+}
+
+/* ---------------- 工具条 ---------------- */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  background: var(--ig-surface);
+  border: 1px solid var(--ig-border);
+  border-radius: var(--ig-radius-lg);
+  box-shadow: var(--ig-shadow);
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.seg {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.stat {
+  color: var(--ig-text-weak);
+  font-size: 12.5px;
+}
+
+.stat-strong {
+  color: var(--ig-text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--ig-border);
+  border-radius: 999px;
+  color: var(--ig-text-weak);
+  font-size: 12.5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch input {
+  accent-color: var(--ig-blue);
+  margin: 0;
+}
+
+/* ---------------- 进度区 ---------------- */
+
+.progress-wrap {
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  background: var(--ig-surface);
+  border: 1px solid var(--ig-border);
+  border-radius: var(--ig-radius-lg);
+  box-shadow: var(--ig-shadow);
+}
+
+.progress {
+  height: 8px;
+  overflow: hidden;
+  background: #edf1f9;
+  border-radius: 999px;
+}
+
+.progress-bar {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--ig-blue), var(--ig-violet));
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+.progress-text {
+  margin-top: 8px;
+  color: var(--ig-text-weak);
+  font-size: 12.5px;
+  white-space: pre-line;
+}
+
+.fail-list {
+  margin-top: 10px;
+  padding-left: 18px;
+  max-height: 190px;
+  overflow: auto;
+  color: var(--ig-danger);
+  font-size: 12.5px;
+}
+
+.fail-list li {
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+
+.fail-list li.note {
+  color: var(--ig-text-weak);
+}
+
+/* ---------------- 图片网格 ---------------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));
+  gap: var(--ig-space);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--ig-surface);
+  border: 1px solid var(--ig-border);
+  border-radius: var(--ig-radius-md);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: #cfdaf2;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+}
+
+.card[data-selected="1"] {
+  border-color: var(--ig-blue);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16), 0 10px 24px rgba(37, 99, 235, 0.12);
+}
+
+.thumb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  background: repeating-conic-gradient(#f7f9fd 0% 25%, #eef2f9 0% 50%) 50% / 18px 18px;
+  overflow: hidden;
+}
+
+.thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.thumb[data-broken="1"]::after {
+  content: "图片加载失败";
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 4px 0;
+  background: rgba(194, 65, 12, 0.9);
+  color: #fff;
+  font-size: 11.5px;
+  text-align: center;
+}
+
+.picker {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+  cursor: pointer;
+}
+
+.picker input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--ig-blue);
+  cursor: pointer;
+}
+
+.badge-src {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(31, 36, 48, 0.7);
+  color: #fff;
+  font-size: 11px;
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px 12px;
+}
+
+.dims {
+  color: var(--ig-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.url {
+  color: var(--ig-text-weak);
+  font-size: 11.5px;
+  word-break: break-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-height: 2.9em;
+}
+
+.card-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-top: 2px;
+}
+
+/* ---------------- 状态视图 ---------------- */
+
+.state {
+  padding: 64px 24px;
+  text-align: center;
+  background: var(--ig-surface);
+  border: 1px solid var(--ig-border);
+  border-radius: var(--ig-radius-lg);
+  box-shadow: var(--ig-shadow);
+}
+
+.state-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 16px;
+  border-radius: 18px;
+  background: var(--ig-blue-soft);
+  color: var(--ig-blue);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.state h2 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.state p {
+  max-width: 56ch;
+  margin: 0 auto 18px;
+  color: var(--ig-text-weak);
+}
+
+.state-error .state-icon {
+  background: #fdece4;
+  color: var(--ig-danger);
+}
+
+.state-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.state-spin {
+  border: 4px solid var(--ig-blue-soft);
+  border-top-color: var(--ig-blue);
+  background: transparent;
+  border-radius: 50%;
+  animation: ig-spin 0.9s linear infinite;
+}
+
+@keyframes ig-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------------- 底栏 ---------------- */
+
+.statusbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 24px;
+  border-top: 1px solid var(--ig-border);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ig-text-weak);
+  font-size: 12px;
+}
+
+.statusbar .ok {
+  color: var(--ig-success);
+}
+
+.statusbar .bad {
+  color: var(--ig-danger);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .topbar,
+  .page,
+  .statusbar {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: 12px;
+  }
+
+  .toolbar {
+    align-items: flex-start;
+  }
+}

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>图提取 ImageGrab —— 图片展示</title>
+    <link rel="stylesheet" href="gallery.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <img class="brand-logo" src="icons/icon48.png" alt="" width="40" height="40" />
+        <div class="brand-text">
+          <h1>图提取 ImageGrab</h1>
+          <p id="sourceInfo">正在读取采集结果…</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button type="button" class="btn btn-ghost" id="btnRescan">重新采集</button>
+        <a class="btn btn-ghost" id="btnSource" href="#" target="_blank" rel="noreferrer noopener">打开来源页面</a>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="toolbar" id="toolbar" hidden>
+        <div class="toolbar-left">
+          <span class="stat" id="statTotal">共 0 张</span>
+          <span class="stat" id="statStats"></span>
+        </div>
+        <div class="toolbar-right">
+          <div class="seg">
+            <button type="button" class="btn btn-quiet" id="btnSelectAll">全选</button>
+            <button type="button" class="btn btn-quiet" id="btnSelectNone">取消选择</button>
+            <button type="button" class="btn btn-quiet" id="btnInvert">反选</button>
+          </div>
+          <label class="switch" title="勾选后会先转成 PNG 再下载">
+            <input type="checkbox" id="chkPng" checked />
+            <span>转换为 PNG</span>
+          </label>
+          <span class="stat stat-strong" id="statSelected">已选 0 张</span>
+          <button type="button" class="btn btn-primary" id="btnDownload">下载选中</button>
+        </div>
+      </section>
+
+      <section class="progress-wrap" id="progressWrap" hidden>
+        <div class="progress">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <p class="progress-text" id="progressText"></p>
+        <ul class="fail-list" id="failList" hidden></ul>
+      </section>
+
+      <section class="grid" id="grid" hidden></section>
+
+      <section class="state" id="stateLoading">
+        <div class="state-icon state-spin"></div>
+        <h2>正在读取采集结果</h2>
+        <p>如果长时间没有响应，请回到商品页重新点击“获取图片”。</p>
+      </section>
+
+      <section class="state" id="stateEmpty" hidden>
+        <div class="state-icon">空</div>
+        <h2>没有采集到符合条件的图片</h2>
+        <p id="emptyHint">
+          可能的原因：页面图片还没加载完成、图片被判定为图标或占位图、或者当前页面本身没有商品图。
+        </p>
+        <div class="state-actions">
+          <button type="button" class="btn btn-primary" id="btnRescan2">重新采集</button>
+          <a class="btn btn-ghost" id="btnSource2" href="#" target="_blank" rel="noreferrer noopener">打开来源页面</a>
+        </div>
+      </section>
+
+      <section class="state state-error" id="stateError" hidden>
+        <div class="state-icon">!</div>
+        <h2 id="errorTitle">读取失败</h2>
+        <p id="errorDetail"></p>
+        <div class="state-actions">
+          <button type="button" class="btn btn-primary" id="btnRetry">重试</button>
+          <a class="btn btn-ghost" id="btnSource3" href="#" target="_blank" rel="noreferrer noopener">打开来源页面</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="statusbar">
+      <span id="footerText">图提取 ImageGrab</span>
+      <span id="footerRight"></span>
+    </footer>
+
+    <script src="lib/extract-core.js"></script>
+    <script src="gallery.js"></script>
+  </body>
+</html>

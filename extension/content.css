@@ -1,0 +1,225 @@
+/*
+ * 图提取 ImageGrab —— 悬浮按钮样式
+ * 本文件通过 <link rel="stylesheet"> 注入到 Shadow DOM 内部，
+ * 因此页面自身的 CSS 不会影响这里的样式，反之亦然。
+ */
+
+:host {
+  all: initial;
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 2147483000;
+  display: block;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #1f2430;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.ig-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+/* ---------------- 主按钮 ---------------- */
+
+.ig-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.32), 0 2px 6px rgba(15, 23, 42, 0.14);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+  -webkit-appearance: none;
+  appearance: none;
+  user-select: none;
+}
+
+.ig-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.38), 0 3px 8px rgba(15, 23, 42, 0.16);
+  filter: saturate(1.06);
+}
+
+.ig-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+}
+
+.ig-btn:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+.ig-btn[data-loading="1"] {
+  cursor: progress;
+  filter: grayscale(0.16);
+}
+
+.ig-btn-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border-radius: 5px;
+  background:
+    radial-gradient(circle at 30% 30%, #ffffff 0 22%, transparent 23%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.55));
+  position: relative;
+  overflow: hidden;
+}
+
+.ig-btn-icon::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  height: 6px;
+  border-radius: 2px;
+  background: #1d4ed8;
+  opacity: 0.55;
+}
+
+.ig-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ig-badge[data-empty="1"] {
+  display: none;
+}
+
+/* ---------------- 收起按钮 ---------------- */
+
+.ig-mini {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(31, 36, 48, 0.72);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.24);
+  transition: background 0.16s ease, transform 0.16s ease;
+}
+
+.ig-mini:hover {
+  background: rgba(31, 36, 48, 0.9);
+  transform: scale(1.06);
+}
+
+/* ---------------- 收起后的圆点 ---------------- */
+
+.ig-dot {
+  display: none;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.34);
+  transition: transform 0.16s ease;
+}
+
+.ig-dot::after {
+  content: "";
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin: 0 auto;
+  border: 2px solid #fff;
+  border-radius: 4px;
+  opacity: 0.92;
+}
+
+.ig-dot:hover {
+  transform: scale(1.06);
+}
+
+.ig-wrap[data-collapsed="1"] .ig-btn,
+.ig-wrap[data-collapsed="1"] .ig-mini {
+  display: none;
+}
+
+.ig-wrap[data-collapsed="1"] .ig-dot {
+  display: block;
+}
+
+/* ---------------- 提示条 ---------------- */
+
+.ig-toast {
+  max-width: 320px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(23, 28, 40, 0.94);
+  color: #f5f7ff;
+  font-size: 13px;
+  line-height: 1.5;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.28);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.ig-toast[data-show="1"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.ig-toast[data-tone="error"] {
+  background: rgba(146, 32, 32, 0.95);
+}
+
+.ig-toast[data-tone="ok"] {
+  background: rgba(15, 82, 61, 0.95);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ig-btn,
+  .ig-mini,
+  .ig-dot,
+  .ig-toast {
+    transition: none;
+  }
+  .ig-btn:hover {
+    transform: none;
+  }
+}

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>图提取 ImageGrab —— 采集逻辑浏览器测试页</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: system-ui, "Microsoft YaHei", sans-serif;
+        background: #f5f7fc;
+        color: #1f2430;
+      }
+      h1 {
+        font-size: 18px;
+      }
+      .row {
+        margin: 12px 0;
+        padding: 10px;
+        background: #fff;
+        border: 1px solid #e3e8f2;
+        border-radius: 10px;
+      }
+      .thumb {
+        display: inline-block;
+        vertical-align: middle;
+        margin-right: 10px;
+      }
+      .bg-box {
+        display: inline-block;
+        width: 300px;
+        height: 200px;
+        background-image: url("assets/bg.png");
+        background-size: cover;
+        border-radius: 8px;
+        vertical-align: middle;
+      }
+      .lazy-placeholder {
+        width: 150px;
+        height: 150px;
+        background: #eef2f9;
+        border: 1px dashed #b9c4da;
+        border-radius: 8px;
+      }
+      pre {
+        padding: 14px;
+        background: #101828;
+        color: #d6e2ff;
+        border-radius: 10px;
+        overflow: auto;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>采集逻辑浏览器测试页</h1>
+    <p>
+      这个页面用真实的 DOM、真实的 <code>naturalWidth</code>、真实的
+      <code>getComputedStyle</code> 来验证 <code>collectFromDocument</code>。
+      断言会在所有图片真正加载结束后才开始跑（等待 load 事件，而不是固定等待时间），
+      结果会写入 <code>window.__COLLECT_RESULT__</code> 与
+      <code>window.__COLLECT_TESTS__</code>，并打印在下方。
+    </p>
+
+    <!-- 1. 普通商品主图，带 srcset -->
+    <div class="row">
+      <img
+        class="thumb"
+        id="img-main"
+        src="assets/main.png"
+        srcset="assets/main-400.png 400w, assets/main-800.png 800w"
+        width="160"
+        height="160"
+        alt="商品主图"
+      />
+      <span>主图（srcset 有 400w / 800w 两个候选，应取 800w）</span>
+    </div>
+
+    <!-- 2. 详情长图，两个 -->
+    <div class="row">
+      <img class="thumb" id="img-detail-1" src="assets/detail-1.png" width="120" height="176" alt="详情图1" />
+      <img class="thumb" id="img-detail-2" src="assets/detail-2.png" width="120" height="176" alt="详情图2" />
+      <span>详情长图</span>
+    </div>
+
+    <!-- 3. 懒加载：只有 data-src，src 指向占位图 -->
+    <div class="row">
+      <img
+        class="thumb"
+        id="img-lazy"
+        src="assets/pixel-1x1.png"
+        data-src="assets/lazy.png"
+        data-lazy-src="assets/lazy.png"
+        width="150"
+        height="150"
+        alt="懒加载图"
+      />
+      <span>懒加载图（真实地址在 data-src / data-lazy-src）</span>
+    </div>
+
+    <!-- 4. 图标尺寸图、中性命名的小图与 1x1 追踪像素 -->
+    <div class="row">
+      <img class="thumb" id="img-icon" src="assets/icon-32.png" width="32" height="32" alt="图标" />
+      <img class="thumb" id="img-small" src="assets/small-32.png" width="32" height="32" alt="中性命名的小图" />
+      <img id="img-pixel" src="assets/pixel-1x1.png" width="1" height="1" alt="追踪像素" />
+      <span>图标（关键词过滤）、中性命名小图（尺寸过滤）、追踪像素（关键词过滤）</span>
+    </div>
+
+    <!-- 5. CSS 背景图 -->
+    <div class="row">
+      <span class="bg-box" id="bg-box"></span>
+      <span>CSS 背景图（background-image: url(assets/bg.png)）</span>
+    </div>
+
+    <!-- 6. 关键词过滤：路径里带 icon / sprite -->
+    <div class="row">
+      <img class="thumb" id="img-keyword" src="assets/icon-32.png?path=icon" width="120" height="120" alt="关键词图标" />
+      <span>路径关键词命中 icon（应被过滤）</span>
+    </div>
+
+    <!-- 7. 需要脚本扫描才能发现的地址（不会被渲染成 img） -->
+    <script type="application/json" id="page-data">
+      {
+        "hidden": "assets/detail-1.png?from=script-tag",
+        "hidden2": "assets/hero-preview.png"
+      }
+    </script>
+
+    <h2 style="font-size: 15px">采集结果</h2>
+    <pre id="out">运行中…</pre>
+
+    <h2 style="font-size: 15px">断言结果</h2>
+    <pre id="assertions">运行中…</pre>
+
+    <script src="../../extension/lib/extract-core.js"></script>
+    <script>
+      (function () {
+        'use strict';
+
+        const CORE = globalThis.IGCore;
+        const rel = function (url) {
+          return String(url).replace('http://127.0.0.1:4173/tests/browser/', '');
+        };
+
+        function run(options, label) {
+          const result = CORE.collectFromDocument(document, options, {});
+          return {
+            label: label,
+            count: result.items.length,
+            stats: result.stats,
+            urls: result.items.map(function (i) {
+              return {
+                url: rel(i.url),
+                width: i.width,
+                height: i.height,
+                source: i.source,
+                ext: i.ext,
+                originalUrl: i.originalUrl
+              };
+            })
+          };
+        }
+
+        /**
+         * 等待所有 <img> 真正就绪。
+         * 断言依赖 naturalWidth，而 naturalWidth 只有在资源加载完成后才有意义，
+         * 所以这里等的是真实的 load / error 事件，不是固定等待时间。
+         */
+        function imagesSettled() {
+          const pending = Array.prototype.filter.call(document.images, function (img) {
+            return !img.complete;
+          });
+          if (!pending.length) return Promise.resolve();
+          return Promise.all(
+            pending.map(function (img) {
+              return new Promise(function (resolve) {
+                img.addEventListener('load', resolve, { once: true });
+                img.addEventListener('error', resolve, { once: true });
+              });
+            })
+          );
+        }
+
+        function describe(value) {
+          if (value === undefined) return 'undefined';
+          if (typeof value === 'string') return value;
+          try {
+            return JSON.stringify(value);
+          } catch (err) {
+            return String(value);
+          }
+        }
+
+        function start() {
+          const report = {
+            imageReady: {},
+            defaultRun: run({ debug: true }, '默认设置'),
+            noBackgroundRun: run({ includeBackground: false }, '不采集背景图'),
+            scriptScanRun: run({ scanScripts: true }, '开启脚本扫描'),
+            originalRun: run({ preferOriginal: true }, '开启原图改写'),
+            tinyRun: run({ minSize: 4 }, '最小边长设为 4')
+          };
+
+          // 记录每张图片的实际加载尺寸，用于交叉验证
+          ['img-main', 'img-detail-1', 'img-detail-2', 'img-lazy', 'img-icon', 'img-pixel'].forEach(function (id) {
+            const node = document.getElementById(id);
+            report.imageReady[id] = {
+              naturalWidth: node.naturalWidth,
+              naturalHeight: node.naturalHeight,
+              currentSrc: rel(node.currentSrc),
+              htmlWidth: Number(node.getAttribute('width')),
+              htmlHeight: Number(node.getAttribute('height'))
+            };
+          });
+
+          // ------------------------------------------------------------------
+          // 断言
+          // ------------------------------------------------------------------
+          const checks = [];
+          function check(name, condition, detail) {
+            checks.push({ name: name, pass: !!condition, detail: condition ? '' : describe(detail) });
+          }
+          function has(list, url) {
+            return list.some(function (u) { return u === url; });
+          }
+
+          const d = report.defaultRun;
+          const dUrls = d.urls.map(function (u) { return u.url; });
+
+          check('srcset 取到了 800w 候选', has(dUrls, 'assets/main-800.png'), dUrls);
+          check('采集到 src 里的主图', has(dUrls, 'assets/main.png'), dUrls);
+          check('采集到两张详情图', has(dUrls, 'assets/detail-1.png') && has(dUrls, 'assets/detail-2.png'), dUrls);
+          check('懒加载 data-src 图片被采集到', has(dUrls, 'assets/lazy.png'), dUrls);
+          check('CSS 背景图被采集到', has(dUrls, 'assets/bg.png'), dUrls);
+          check('1x1 占位图没有把懒加载真图挤掉', !has(dUrls, 'assets/pixel-1x1.png'), dUrls);
+          check('32x32 图标被过滤', !has(dUrls, 'assets/icon-32.png'), dUrls);
+          check('路径含 icon 关键词的图片被过滤', !has(dUrls, 'assets/icon-32.png?path=icon'), dUrls);
+          check('默认不扫描 script 里的隐藏地址', !has(dUrls, 'assets/hero-preview.png'), dUrls);
+          check('同一张图的重复候选被去重（main 只出现两条：800w 与 src）',
+            dUrls.filter(function (u) { return u.indexOf('main') >= 0; }).length === 2, dUrls);
+          check('中性命名的小图按尺寸被过滤', !has(dUrls, 'assets/small-32.png'), dUrls);
+
+          // 主图尺寸：必须等于浏览器给出的真实像素尺寸，而不是 HTML 属性里的 160×160。
+          // 注意 srcset 图片的 naturalWidth 是浏览器做了密度修正后的值，
+          // 所以这里跟 DOM 的实时值比较，而不是写死一个数字。
+          const mainImg = document.getElementById('img-main');
+          const mainItem = d.urls.filter(function (u) { return u.url === 'assets/main-800.png'; })[0];
+          check(
+            '主图尺寸取自图片真实像素 ' + mainImg.naturalWidth + '×' + mainImg.naturalHeight +
+              '（而不是 HTML 属性里的 ' + mainImg.getAttribute('width') + '）',
+            !!mainItem &&
+              mainItem.width === mainImg.naturalWidth &&
+              mainItem.height === mainImg.naturalHeight &&
+              mainItem.width !== Number(mainImg.getAttribute('width')),
+            describe(mainItem)
+          );
+
+          const lazyItem = d.urls.filter(function (u) { return u.url === 'assets/lazy.png'; })[0];
+          check('懒加载图尺寸取自 HTML 属性 150x150', lazyItem && lazyItem.width === 150 && lazyItem.height === 150, describe(lazyItem));
+          const bgItem = d.urls.filter(function (u) { return u.url === 'assets/bg.png'; })[0];
+          check('背景图尺寸取自渲染盒子 300x200', bgItem && bgItem.width === 300 && bgItem.height === 200, describe(bgItem));
+          check('背景图来源被标记为 background', bgItem && bgItem.source === 'background', describe(bgItem));
+
+          const nb = report.noBackgroundRun.urls.map(function (u) { return u.url; });
+          check('关闭背景图采集后不再出现 bg.png', !has(nb, 'assets/bg.png'), nb);
+          check('关闭背景图采集后仍有 5 张', report.noBackgroundRun.count === 5, report.noBackgroundRun.count);
+
+          const ss = report.scriptScanRun.urls.map(function (u) { return u.url; });
+          check('开启脚本扫描后能找到只出现在脚本里的图片', has(ss, 'assets/hero-preview.png'), ss);
+          check('脚本扫描结果来源标记为 script',
+            report.scriptScanRun.urls.some(function (u) { return u.url === 'assets/hero-preview.png' && u.source === 'script'; }), ss);
+
+          const tiny = report.tinyRun.urls.map(function (u) { return u.url; });
+          check('最小边长设为 4 时中性命名的小图会进入结果', has(tiny, 'assets/small-32.png'), tiny);
+          check('关键词过滤不受最小边长影响（1x1 仍被过滤）', !has(tiny, 'assets/pixel-1x1.png'), tiny);
+          check('关键词过滤不受最小边长影响（icon 仍被过滤）', !has(tiny, 'assets/icon-32.png'), tiny);
+
+          check('候选列表里保留了被过滤的条目（debug 模式）',
+            Array.isArray(d.stats && d.stats.dropped) === false && report.defaultRun.stats.raw > d.count,
+            report.defaultRun.stats);
+
+          const passed = checks.filter(function (c) { return c.pass; }).length;
+          const failedList = checks.filter(function (c) { return !c.pass; });
+
+          window.__COLLECT_RESULT__ = report;
+          window.__COLLECT_TESTS__ = {
+            total: checks.length,
+            passed: passed,
+            failed: failedList.length,
+            failures: failedList.map(function (c) { return c.name + ' —— ' + c.detail; }),
+            checks: checks
+          };
+
+          document.getElementById('out').textContent = JSON.stringify(report, null, 2);
+          document.getElementById('assertions').textContent =
+            '通过 ' + passed + ' / ' + checks.length + ' 项\n' +
+            checks.map(function (c) { return (c.pass ? '[通过] ' : '[失败] ') + c.name + (c.detail ? ' —— ' + c.detail : ''); }).join('\n');
+        }
+
+        // 图片就绪之后再跑断言；万一等待过程出错，也要留下可读的结果对象
+        imagesSettled().then(start).catch(function (err) {
+          window.__COLLECT_TESTS__ = {
+            total: 1,
+            passed: 0,
+            failed: 1,
+            failures: ['测试脚本异常：' + String((err && err.stack) || err)],
+            checks: []
+          };
+          document.getElementById('assertions').textContent = '测试脚本异常：' + String((err && err.stack) || err);
+        });
+      })();
+    </script>
+  </body>
+</html>

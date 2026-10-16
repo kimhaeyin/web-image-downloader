@@ -1,0 +1,8 @@
+# 统一换行符：仓库内一律使用 LF。
+# 否则在 Windows 上检出时被转成 CRLF，重新执行 npm run build:zip
+# 会打出一份字节不同的 ZIP，官网显示的 SHA-256 也随之变化。
+* text=auto eol=lf
+
+# 二进制文件不参与换行符转换
+*.png binary
+*.zip binary
