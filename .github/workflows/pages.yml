@@ -25,7 +25,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # 浏览器测试用 Node 内建的全局 WebSocket 连接 CDP。Node 20 没有这个全局对象，
+          # 会直接抛 ReferenceError: WebSocket is not defined；22 起默认开启（22.4 稳定）。
+          # 这里固定成与本地开发一致的版本，避免再出现「本地过、CI 不过」。
+          node-version: '24'
 
       - name: Node 单元测试
         run: node tests/run-tests.js
@@ -59,7 +62,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # 与 test job 保持一致：Node 版本必须自带全局 WebSocket
+          node-version: '24'
 
       # 上传前重新打包，保证发布的安装包由这份源码现打现用
       - name: 按 extension/ 重新打包
